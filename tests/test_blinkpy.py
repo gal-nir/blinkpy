@@ -230,6 +230,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
         """Test that blink mini cameras are found if attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
             "owls": [
                 {
                     "id": 1,
@@ -241,7 +242,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
                     "thumbnail": "/foo/bar",
                     "serial": "abc123",
                 }
-            ]
+            ],
         }
         result = await self.blink.setup_owls()
         self.assertEqual(self.blink.network_ids, ["1234"])
@@ -261,6 +262,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
         """Test that blink mini cameras are properly attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
             "owls": [
                 {
                     "id": 1,
@@ -272,7 +274,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
                     "thumbnail": "/foo/bar",
                     "serial": "abc123",
                 }
-            ]
+            ],
         }
         mock_usage.return_value = {"networks": [{"cameras": [], "network_id": 1234}]}
         result = await self.blink.setup_camera_list()
@@ -322,6 +324,65 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
         """Test that blink doorbell cameras are properly attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
+            "doorbells": [
+                {
+                    "id": 1,
+                    "name": "foo",
+                    "network_id": 1234,
+                    "onboarded": True,
+                    "enabled": True,
+                    "status": "online",
+                    "thumbnail": "/foo/bar",
+                    "serial": "abc123",
+                }
+            ],
+        }
+        mock_usage.return_value = {"networks": [{"cameras": [], "network_id": 1234}]}
+        result = await self.blink.setup_camera_list()
+        self.assertEqual(
+            result, {"1234": [{"name": "foo", "id": "1234", "type": "doorbell"}]}
+        )
+
+    @mock.patch("blinkpy.api.request_camera_usage")
+    async def test_blink_doorbell_with_alt_homescreen_key(self, mock_usage):
+        """Test that doorbells are discovered from alternate homescreen keys."""
+        self.blink.network_ids = ["1234"]
+        self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
+            "lotus": {
+                "devices": [
+                    {
+                        "id": 1,
+                        "name": "foo",
+                        "network_id": 1234,
+                        "onboarded": True,
+                        "enabled": True,
+                        "status": "online",
+                        "thumbnail": "/foo/bar",
+                        "serial": "abc123",
+                    }
+                ]
+            },
+        }
+        mock_usage.return_value = {"networks": [{"cameras": [], "network_id": 1234}]}
+        result = await self.blink.setup_camera_list()
+        self.assertEqual(
+            result, {"1234": [{"name": "foo", "id": "1234", "type": "doorbell"}]}
+        )
+
+    @mock.patch("blinkpy.blinkpy.BlinkLotus.start")
+    @mock.patch("blinkpy.api.request_camera_usage")
+    async def test_blink_syncless_doorbell_not_in_camera_usage(
+        self, mock_usage, mock_lotus_start
+    ):
+        """Test that sync-less doorbells initialization.
+
+        Ensure they initialize even without camera_usage network..
+        """
+        mock_lotus_start.return_value = True
+        self.blink.network_ids = []
+        self.blink.homescreen = {
             "doorbells": [
                 {
                     "id": 1,
@@ -335,17 +396,17 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
                 }
             ]
         }
-        mock_usage.return_value = {"networks": [{"cameras": [], "network_id": 1234}]}
+        mock_usage.return_value = {"networks": []}
         result = await self.blink.setup_camera_list()
-        self.assertEqual(
-            result, {"1234": [{"name": "foo", "id": "1234", "type": "doorbell"}]}
-        )
+        self.assertEqual(result, {})
+        self.assertEqual(self.blink.sync["foo"].__class__, BlinkLotus)
 
     @mock.patch("blinkpy.api.request_camera_usage")
     async def test_blink_multi_doorbell(self, mock_usage):
         """Test that multiple doorbells are properly attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
             "doorbells": [
                 {
                     "id": 1,
@@ -367,7 +428,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
                     "thumbnail": "/bar/foo",
                     "serial": "zxc456",
                 },
-            ]
+            ],
         }
         expected = {
             "1234": [
@@ -384,6 +445,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
         """Test that multiple minis are properly attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
             "owls": [
                 {
                     "id": 1,
@@ -405,7 +467,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
                     "thumbnail": "/bar/foo",
                     "serial": "zxc456",
                 },
-            ]
+            ],
         }
         expected = {
             "1234": [
@@ -422,6 +484,7 @@ class TestBlinkSetup(IsolatedAsyncioTestCase):
         """Test that a mix of cameras are properly attached to sync module."""
         self.blink.network_ids = ["1234"]
         self.blink.homescreen = {
+            "sync_modules": [{"network_id": 1234}],
             "doorbells": [
                 {
                     "id": 1,
